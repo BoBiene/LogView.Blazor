@@ -1,0 +1,81 @@
+@*
+    DxLogTailViewer — DevExpress-ready wrapper around LogTailViewer.
+
+    Applies DevExpress-themed CSS classes to the built-in console tail viewer
+    and exposes all LogTailViewer parameters for a consistent API surface.
+
+    Usage:
+        <DxLogTailViewer Feed="myFeed" />
+*@
+
+<LogTailViewer Feed="Feed"
+               MaxBufferSize="MaxBufferSize"
+               ShowTimestamps="ShowTimestamps"
+               WrapLines="WrapLines"
+               Follow="Follow"
+               SubscriptionRequest="SubscriptionRequest"
+               RowTemplate="RowTemplate ?? _defaultRowTemplate"
+               ToolbarTemplate="ToolbarTemplate" />
+
+@code {
+    private static string TailRowClass(ConsoleLogItem item) =>
+        item.IsError
+            ? "dxbl-grid-data-row dx-logview-tail-row dxbl-grid-data-row-danger"
+            : "dxbl-grid-data-row dx-logview-tail-row";
+
+    private RenderFragment<ConsoleLogItem> _defaultRowTemplate => item =>
+        __builder =>
+        {
+            __builder.OpenElement(0, "div");
+            __builder.AddAttribute(1, "class", TailRowClass(item));
+
+            if (ShowTimestamps && item.Timestamp is not null)
+            {
+                __builder.OpenElement(2, "span");
+                __builder.AddAttribute(3, "class", "dx-logview-ts");
+                __builder.AddContent(4, item.Timestamp.Value.ToLocalTime().ToString("HH:mm:ss"));
+                __builder.CloseElement();
+            }
+
+            if (!string.IsNullOrWhiteSpace(item.Source))
+            {
+                __builder.OpenElement(5, "span");
+                __builder.AddAttribute(6, "class", "dx-logview-category");
+                __builder.AddContent(7, item.Source);
+                __builder.CloseElement();
+            }
+
+            __builder.OpenElement(8, "span");
+            __builder.AddAttribute(9, "class", "dx-logview-message");
+            __builder.AddContent(10, item.Text);
+            __builder.CloseElement();
+
+            __builder.CloseElement();
+        };
+
+    /// <summary>Required log data source.</summary>
+    [Parameter, EditorRequired] public ILogFeed<ConsoleLogItem> Feed { get; set; } = default!;
+
+    /// <summary>
+    /// Optional custom row template. When <c>null</c> the DevExpress-themed default row is used.
+    /// </summary>
+    [Parameter] public RenderFragment<ConsoleLogItem>? RowTemplate { get; set; }
+
+    /// <summary>Optional extra toolbar content.</summary>
+    [Parameter] public RenderFragment? ToolbarTemplate { get; set; }
+
+    /// <summary>Maximum number of lines held in the ring buffer.</summary>
+    [Parameter] public int MaxBufferSize { get; set; } = 500;
+
+    /// <summary>Whether to display the timestamp column.</summary>
+    [Parameter] public bool ShowTimestamps { get; set; } = true;
+
+    /// <summary>Whether to wrap long lines.</summary>
+    [Parameter] public bool WrapLines { get; set; }
+
+    /// <summary>Whether to auto-scroll to the newest entry.</summary>
+    [Parameter] public bool Follow { get; set; } = true;
+
+    /// <summary>Controls batching and follow behaviour on the underlying feed subscription.</summary>
+    [Parameter] public LogSubscriptionRequest SubscriptionRequest { get; set; } = new(100, true);
+}

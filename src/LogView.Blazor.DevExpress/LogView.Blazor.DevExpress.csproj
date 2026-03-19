@@ -1,12 +1,25 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <PropertyGroup>
+    <Title>LogView.Blazor.DevExpress</Title>
+    <Description>Optional DevExpress-oriented Blazor components and renderer for LogView.Blazor. Provides DxStructuredLogViewer and DxLogTailViewer wrappers, and a DevExpressLogViewRenderer that renders log items using DevExpress grid CSS conventions.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\LogView.Blazor\LogView.Blazor.csproj" />
   </ItemGroup>
 
-  <PropertyGroup>
-    <Title>LogView.Blazor.DevExpress</Title>
-    <Description>Optional DevExpress-oriented renderer abstractions for LogView.Blazor.</Description>
-  </PropertyGroup>
+  <!--
+    To use real DevExpress Blazor components (DxGrid, etc.):
+      1. Add your DevExpress NuGet feed: https://nuget.devexpress.com/api
+      2. Un-comment the package reference below and set the version:
+         <PackageReference Include="DevExpress.Blazor" Version="YourVersion" />
+      3. Replace the HTML scaffolds in DxStructuredLogViewer.razor / DxLogTailViewer.razor
+         with the actual DxGrid / DxListBox component markup.
+  -->
 
   <ItemGroup>
     <Content Include="..\..\README.md" Pack="true" PackagePath="" Visible="false" />
