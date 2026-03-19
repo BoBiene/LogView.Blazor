@@ -1,0 +1,23 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - run: dotnet restore LogView.Blazor.sln
+      - run: dotnet build LogView.Blazor.sln --configuration Release --no-restore
+      - run: dotnet pack src/LogView.Blazor/LogView.Blazor.csproj --configuration Release --no-build -o ./artifacts
+      - run: dotnet pack src/LogView.Blazor.DevExpress/LogView.Blazor.DevExpress.csproj --configuration Release --no-build -o ./artifacts
+      - name: Publish packages
+        run: dotnet nuget push ./artifacts/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate

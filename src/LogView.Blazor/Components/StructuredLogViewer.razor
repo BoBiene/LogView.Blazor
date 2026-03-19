@@ -1,0 +1,181 @@
+@implements IAsyncDisposable
+@inject ILogViewRenderer DefaultRenderer
+
+<div class="lv-surface">
+    <div class="lv-toolbar lv-toolbar-grid lv-toolbar-query">
+        <InputText class="lv-input" placeholder="Search text" @bind-Value="SearchText" @bind-Value:event="oninput" />
+        <InputText class="lv-input" placeholder="Resource" @bind-Value="ResourceFilter" @bind-Value:event="oninput" />
+        <InputText class="lv-input" placeholder="Min level" @bind-Value="MinimumLevel" @bind-Value:event="oninput" />
+        <InputText class="lv-input" placeholder="Trace id" @bind-Value="TraceId" @bind-Value:event="oninput" />
+        <InputText class="lv-input" placeholder="Span id" @bind-Value="SpanId" @bind-Value:event="oninput" />
+        @if (ToolbarTemplate is not null)
+        {
+            @ToolbarTemplate
+        }
+    </div>
+
+    @if (Renderer is not null)
+    {
+        @Renderer.RenderStructured(_filteredItems)
+    }
+    else
+    {
+        <div class="lv-grid-shell">
+            <div class="lv-grid-header">
+                @foreach (var column in _columns.Where(column => column.IsVisible))
+                {
+                    <span>@column.Title</span>
+                }
+                <span>Actions</span>
+            </div>
+            <Virtualize TItem="StructuredLogItem" Items="_filteredItems" Context="item">
+                <div class="lv-grid-row @(ReferenceEquals(_selected, item) ? "lv-grid-row-selected" : string.Empty)" @onclick="() => Select(item)">
+                    @foreach (var column in _columns.Where(column => column.IsVisible))
+                    {
+                        <span>@column.ValueSelector(item)</span>
+                    }
+                    <button type="button" class="lv-button" @onclick:stopPropagation="true" @onclick="() => Select(item)">Details</button>
+                </div>
+            </Virtualize>
+        </div>
+
+        @if (ShowDetailsPanel && _selected is not null)
+        {
+            <div class="lv-details">
+                @if (DetailsTemplate is not null)
+                {
+                    @DetailsTemplate(_selected)
+                }
+                else
+                {
+                    <dl>
+                        <dt>Timestamp</dt><dd>@_selected.Timestamp.ToString("u")</dd>
+                        <dt>Level</dt><dd>@_selected.Level</dd>
+                        <dt>Message</dt><dd>@_selected.Message</dd>
+                        <dt>Category</dt><dd>@_selected.Category</dd>
+                        <dt>TraceId</dt><dd>@_selected.TraceId</dd>
+                        <dt>SpanId</dt><dd>@_selected.SpanId</dd>
+                    </dl>
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ILogFeed<StructuredLogItem> Feed { get; set; } = default!;
+    [Parameter] public RenderFragment<StructuredLogItem>? DetailsTemplate { get; set; }
+    [Parameter] public RenderFragment? ToolbarTemplate { get; set; }
+    [Parameter] public IReadOnlyList<StructuredLogColumn>? Columns { get; set; }
+    [Parameter] public StructuredLogFilter Filter { get; set; } = StructuredLogFilter.Empty;
+    [Parameter] public StructuredLogQuery Query { get; set; } = StructuredLogQuery.Empty;
+    [Parameter] public bool ShowDetailsPanel { get; set; } = true;
+    [Parameter] public LogSubscriptionRequest SubscriptionRequest { get; set; } = new(100, true);
+    [Parameter] public ILogViewRenderer? Renderer { get; set; }
+
+    private CancellationTokenSource? _cts;
+    private Task? _subscriptionTask;
+    private readonly List<StructuredLogItem> _items = [];
+    private List<StructuredLogItem> _filteredItems = [];
+    private StructuredLogItem? _selected;
+    private IReadOnlyList<StructuredLogColumn> _columns = [];
+    private ILogFeed<StructuredLogItem>? _currentFeed;
+    private LogSubscriptionRequest? _currentRequest;
+
+    private string? _resourceFilter;
+    private string? _searchText;
+    private string? _minimumLevel;
+    private string? _traceId;
+    private string? _spanId;
+
+    private string? SearchText { get => _searchText; set { if (_searchText == value) return; _searchText = value; ApplyFilter(); } }
+    private string? ResourceFilter { get => _resourceFilter; set { if (_resourceFilter == value) return; _resourceFilter = value; ApplyFilter(); } }
+    private string? MinimumLevel { get => _minimumLevel; set { if (_minimumLevel == value) return; _minimumLevel = value; ApplyFilter(); } }
+    private string? TraceId { get => _traceId; set { if (_traceId == value) return; _traceId = value; ApplyFilter(); } }
+    private string? SpanId { get => _spanId; set { if (_spanId == value) return; _spanId = value; ApplyFilter(); } }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _columns = Columns ??
+        [
+            new("timestamp", "Timestamp", item => item.Timestamp.ToString("HH:mm:ss")),
+            new("level", "Level", item => item.Level),
+            new("message", "Message", item => item.Message),
+            new("category", "Category", item => item.Category),
+            new("trace", "Trace", item => item.TraceId),
+            new("span", "Span", item => item.SpanId)
+        ];
+
+        SyncLocalQuery();
+        ApplyFilter();
+
+        if (!ReferenceEquals(_currentFeed, Feed) || _currentRequest != SubscriptionRequest)
+        {
+            _currentFeed = Feed;
+            _currentRequest = SubscriptionRequest;
+            await RestartSubscriptionAsync();
+        }
+    }
+
+    private void SyncLocalQuery()
+    {
+        _searchText ??= Query.SearchText ?? Filter.Text;
+        _resourceFilter ??= Query.Resource ?? Filter.Resource;
+        _minimumLevel ??= Query.MinimumLevel ?? Filter.Level;
+        _traceId ??= Query.TraceId;
+        _spanId ??= Query.SpanId;
+    }
+
+    private async Task RestartSubscriptionAsync()
+    {
+        if (_subscriptionTask is not null)
+        {
+            _cts?.Cancel();
+            try { await _subscriptionTask; } catch (OperationCanceledException) { }
+        }
+
+        _cts = new CancellationTokenSource();
+        _subscriptionTask = SubscribeAsync(_cts.Token);
+    }
+
+    private async Task SubscribeAsync(CancellationToken cancellationToken)
+    {
+        await foreach (var batch in Feed.SubscribeAsync(SubscriptionRequest with { Follow = true }, cancellationToken))
+        {
+            _items.AddRange(batch);
+            ApplyFilter();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void ApplyFilter()
+    {
+        var query = new StructuredLogQuery(
+            SearchText ?? Query.SearchText ?? Filter.Text,
+            ResourceFilter ?? Query.Resource ?? Filter.Resource,
+            MinimumLevel ?? Query.MinimumLevel ?? Filter.Level,
+            TraceId ?? Query.TraceId,
+            SpanId ?? Query.SpanId,
+            Query.PropertyFilters);
+
+        _filteredItems = _items.Where(item => Filtering.StructuredLogFilterEvaluator.Matches(item, query)).ToList();
+
+        if (_selected is not null && !_filteredItems.Contains(_selected))
+        {
+            _selected = null;
+        }
+    }
+
+    private void Select(StructuredLogItem item) => _selected = item;
+
+    public async ValueTask DisposeAsync()
+    {
+        _cts?.Cancel();
+        if (_subscriptionTask is not null)
+        {
+            try { await _subscriptionTask; } catch (OperationCanceledException) { }
+        }
+
+        _cts?.Dispose();
+    }
+}
