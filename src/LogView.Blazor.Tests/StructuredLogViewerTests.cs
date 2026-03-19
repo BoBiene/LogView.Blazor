@@ -1,15 +1,9 @@
-using LogView.Blazor.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LogView.Blazor.Tests;
 
 public sealed class StructuredLogViewerTests : BunitContext
 {
-    public StructuredLogViewerTests()
-    {
-        Services.AddScoped<ILogViewRenderer, DefaultLogViewRenderer>();
-    }
-
     [Fact]
     public void RendersStructuredItemsUsingFilterParameter()
     {
