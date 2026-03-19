@@ -1,0 +1,20 @@
+name: ci
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+
+jobs:
+  build-test-pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - run: dotnet restore LogView.Blazor.sln
+      - run: dotnet build LogView.Blazor.sln --configuration Release --no-restore
+      - run: dotnet test LogView.Blazor.sln --configuration Release --no-build
+      - run: dotnet pack src/LogView.Blazor/LogView.Blazor.csproj --configuration Release --no-build -o ./artifacts
+      - run: dotnet pack src/LogView.Blazor.DevExpress/LogView.Blazor.DevExpress.csproj --configuration Release --no-build -o ./artifacts

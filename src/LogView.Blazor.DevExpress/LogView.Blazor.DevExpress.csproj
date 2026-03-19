@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\LogView.Blazor\LogView.Blazor.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <Title>LogView.Blazor.DevExpress</Title>
+    <Description>Optional DevExpress-oriented renderer abstractions for LogView.Blazor.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\README.md" Pack="true" PackagePath="" Visible="false" />
+  </ItemGroup>
+</Project>

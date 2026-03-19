@@ -1,0 +1,67 @@
+@page "/"
+@inject DemoLogState DemoLogState
+@inject TextFileTailFeed FileFeed
+@inject SerilogFileFeed StructuredFileFeed
+@inject InMemoryLogFeed<ConsoleLogItem> InProcessConsoleFeed
+@inject InMemoryLogFeed<StructuredLogItem> InProcessStructuredFeed
+
+<PageTitle>LogView Dashboard</PageTitle>
+
+<h1 class="mb-4">LogView.Blazor demo</h1>
+<p class="lead">Switch between live file tailing, structured Serilog file ingestion, and in-process sink streaming.</p>
+
+<div class="btn-group mb-4" role="group">
+    <button class="btn btn-primary" @onclick='() => SelectedConsoleSource = "file"'>Console file</button>
+    <button class="btn btn-outline-primary" @onclick='() => SelectedConsoleSource = "inprocess"'>Console in-process</button>
+    <button class="btn btn-success" @onclick='() => SelectedStructuredSource = "file"'>Structured file</button>
+    <button class="btn btn-outline-success" @onclick='() => SelectedStructuredSource = "inprocess"'>Structured in-process</button>
+</div>
+
+<div class="row g-4">
+    <div class="col-12 col-xl-5">
+        <h2 class="h4">LogTailViewer</h2>
+        <LogTailViewer Feed="CurrentConsoleFeed" MaxBufferSize="250">
+            <ToolbarTemplate>
+                <span class="text-light-emphasis">Source: @SelectedConsoleSource</span>
+            </ToolbarTemplate>
+        </LogTailViewer>
+    </div>
+    <div class="col-12 col-xl-7">
+        <h2 class="h4">StructuredLogViewer</h2>
+        <StructuredLogViewer Feed="CurrentStructuredFeed">
+            <ToolbarTemplate>
+                <span class="text-light-emphasis">Source: @SelectedStructuredSource</span>
+            </ToolbarTemplate>
+            <DetailsTemplate Context="item">
+                <div>
+                    <h3 class="h5">@item.Level · @item.Timestamp.ToLocalTime()</h3>
+                    <p>@item.Message</p>
+                    <ul>
+                        @if (item.Properties is not null)
+                        {
+                            @foreach (var property in item.Properties)
+                            {
+                                <li><strong>@property.Key</strong>: @property.Value</li>
+                            }
+                        }
+                    </ul>
+                </div>
+            </DetailsTemplate>
+        </StructuredLogViewer>
+    </div>
+</div>
+
+<section class="mt-4">
+    <h2 class="h4">Current demo state</h2>
+    <p>Last generated event: @DemoLogState.LastMessage</p>
+    <p>Plain log file: <code>@DemoLogState.PlainLogPath</code></p>
+    <p>Structured log file: <code>@DemoLogState.StructuredLogPath</code></p>
+</section>
+
+@code {
+    private string SelectedConsoleSource { get; set; } = "file";
+    private string SelectedStructuredSource { get; set; } = "file";
+
+    private ILogFeed<ConsoleLogItem> CurrentConsoleFeed => SelectedConsoleSource == "file" ? FileFeed : InProcessConsoleFeed;
+    private ILogFeed<StructuredLogItem> CurrentStructuredFeed => SelectedStructuredSource == "file" ? StructuredFileFeed : InProcessStructuredFeed;
+}
