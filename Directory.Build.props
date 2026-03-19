@@ -7,10 +7,10 @@
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);1591</NoWarn>
-    <Authors>OpenAI</Authors>
-    <Company>LogView</Company>
-    <PackageProjectUrl>https://github.com/example/LogView.Blazor</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/example/LogView.Blazor</RepositoryUrl>
+    <Authors>BoBiene</Authors>
+    <Company>BoBiene</Company>
+    <PackageProjectUrl>https://github.com/BoBiene/LogView.Blazor</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/BoBiene/LogView.Blazor</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>

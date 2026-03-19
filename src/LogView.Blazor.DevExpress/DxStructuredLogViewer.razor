@@ -1,0 +1,55 @@
+@*
+    DxStructuredLogViewer — DevExpress-ready wrapper around StructuredLogViewer.
+
+    Passes a DevExpressLogViewRenderer to the core viewer so the grid body is
+    rendered with DevExpress-style HTML/CSS conventions.
+
+    When DevExpress.Blazor is available replace the renderer in
+    DevExpressLogViewRenderer.cs with actual DxGrid markup and this component
+    will automatically pick it up through the Renderer parameter.
+
+    Usage:
+        <DxStructuredLogViewer Feed="myFeed" />
+*@
+
+<StructuredLogViewer Feed="Feed"
+                     Filter="Filter"
+                     Query="Query"
+                     Columns="Columns"
+                     ShowDetailsPanel="ShowDetailsPanel"
+                     MaxItems="MaxItems"
+                     SubscriptionRequest="SubscriptionRequest"
+                     ToolbarTemplate="ToolbarTemplate"
+                     DetailsTemplate="DetailsTemplate"
+                     Renderer="_renderer" />
+
+@code {
+    private readonly DevExpressLogViewRenderer _renderer = new();
+
+    /// <summary>Required log data source.</summary>
+    [Parameter, EditorRequired] public ILogFeed<StructuredLogItem> Feed { get; set; } = default!;
+
+    /// <summary>Optional details panel template rendered when a row is selected.</summary>
+    [Parameter] public RenderFragment<StructuredLogItem>? DetailsTemplate { get; set; }
+
+    /// <summary>Optional extra toolbar content rendered after the built-in filter inputs.</summary>
+    [Parameter] public RenderFragment? ToolbarTemplate { get; set; }
+
+    /// <summary>Optional column definitions. Falls back to the default column set when <c>null</c>.</summary>
+    [Parameter] public IReadOnlyList<StructuredLogColumn>? Columns { get; set; }
+
+    /// <summary>Static filter applied on top of any interactive query inputs.</summary>
+    [Parameter] public StructuredLogFilter Filter { get; set; } = StructuredLogFilter.Empty;
+
+    /// <summary>Initial query values pre-populated in the filter inputs.</summary>
+    [Parameter] public StructuredLogQuery Query { get; set; } = StructuredLogQuery.Empty;
+
+    /// <summary>Whether to show the details panel when a row is selected.</summary>
+    [Parameter] public bool ShowDetailsPanel { get; set; } = true;
+
+    /// <summary>Maximum number of items kept in memory. Oldest items are discarded when exceeded.</summary>
+    [Parameter] public int MaxItems { get; set; } = 5000;
+
+    /// <summary>Controls batching and follow behaviour on the underlying feed subscription.</summary>
+    [Parameter] public LogSubscriptionRequest SubscriptionRequest { get; set; } = new(100, true);
+}

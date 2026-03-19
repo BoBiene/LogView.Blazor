@@ -1,5 +1,4 @@
 @implements IAsyncDisposable
-@inject ILogViewRenderer DefaultRenderer
 
 <div class="lv-surface">
     <div class="lv-toolbar lv-toolbar-grid lv-toolbar-query">
@@ -70,6 +69,7 @@
     [Parameter] public StructuredLogFilter Filter { get; set; } = StructuredLogFilter.Empty;
     [Parameter] public StructuredLogQuery Query { get; set; } = StructuredLogQuery.Empty;
     [Parameter] public bool ShowDetailsPanel { get; set; } = true;
+    [Parameter] public int MaxItems { get; set; } = 5000;
     [Parameter] public LogSubscriptionRequest SubscriptionRequest { get; set; } = new(100, true);
     [Parameter] public ILogViewRenderer? Renderer { get; set; }
 
@@ -143,6 +143,11 @@
         await foreach (var batch in Feed.SubscribeAsync(SubscriptionRequest with { Follow = true }, cancellationToken))
         {
             _items.AddRange(batch);
+            if (_items.Count > MaxItems * 1.1)
+            {
+                _items.RemoveRange(0, _items.Count - MaxItems);
+            }
+
             ApplyFilter();
             await InvokeAsync(StateHasChanged);
         }
